@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""List the open tabs of a running Firefox from its session store, no extension needed.
+
+Usage: firefox-tabs [profile-dir]
+Marks the selected tab of each window with '*'. Decodes the mozLz4 container
+with a tiny LZ4 block decoder so no third-party module is required.
+"""
+import glob, json, os, struct, sys
+
+
+def lz4_block(src: bytes, _dst_len: int) -> bytes:
+    dst = bytearray(); i = 0
+    while i < len(src):
+        tok = src[i]; i += 1
+        ll = tok >> 4
+        if ll == 15:
+            while True:
+                b = src[i]; i += 1; ll += b
+                if b != 255: break
+        dst += src[i:i + ll]; i += ll
+        if i >= len(src): break
+        off = src[i] | (src[i + 1] << 8); i += 2
+        ml = (tok & 15) + 4
+        if (tok & 15) == 15:
+            while True:
+                b = src[i]; i += 1; ml += b
+                if b != 255: break
+        start = len(dst) - off
+        for k in range(ml): dst.append(dst[start + k])
+    return bytes(dst)
+
+
+def find_profile() -> str:
+    pats = [os.path.expanduser(p) for p in ("~/.mozilla/firefox/*/sessionstore-backups/recovery.jsonlz4",
+                                            "~/.config/mozilla/firefox/*/sessionstore-backups/recovery.jsonlz4")]
+    hits = [h for p in pats for h in glob.glob(p)]
+    if not hits:
+        sys.exit("no Firefox session store found")
+    return os.path.dirname(os.path.dirname(max(hits, key=os.path.getmtime)))
+
+
+def main() -> None:
+    profile = sys.argv[1] if len(sys.argv) > 1 else find_profile()
+    path = os.path.join(profile, "sessionstore-backups", "recovery.jsonlz4")
+    data = open(path, "rb").read()
+    if data[:8] != b"mozLz40\0":
+        sys.exit(f"{path}: not a mozLz4 file")
+    n = struct.unpack("<I", data[8:12])[0]
+    session = json.loads(lz4_block(data[12:], n))
+    for wi, w in enumerate(session.get("windows", [])):
+        sel = w.get("selected")
+        for ti, t in enumerate(w.get("tabs", []), 1):
+            e = t["entries"][t.get("index", 1) - 1]
+            print("*" if ti == sel else " ", wi, ti, e.get("url"), "|", e.get("title"))
+
+
+if __name__ == "__main__":
+    main()

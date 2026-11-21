@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Source this (or let the other scripts source it) to reach the user's Plasma session
+# from a shell that has no desktop environment variables, such as an agent's sandbox.
+: "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
+: "${DBUS_SESSION_BUS_ADDRESS:=unix:path=$XDG_RUNTIME_DIR/bus}"
+if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+  WAYLAND_DISPLAY=$(ls "$XDG_RUNTIME_DIR" | grep -E '^wayland-[0-9]+$' | head -1)
+fi
+export XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS WAYLAND_DISPLAY QT_QPA_PLATFORM=wayland

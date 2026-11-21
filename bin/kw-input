@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Inject keyboard or pointer input through /dev/uinput with dotool.
+# Works on KDE Plasma Wayland, which offers no virtual keyboard protocol to clients.
+# Requires write access to /dev/uinput (udev rule or group membership).
+# Usage: kw-input <dotool commands...>      e.g. kw-input "key k"
+#        kw-input "mouseto 0.45 0.50" "click left"
+# dotool reference: https://sr.ht/~geb/dotool/
+set -euo pipefail
+. "$(dirname "$0")/kw-env"
+if command -v dotool >/dev/null; then DOTOOL=(dotool); else DOTOOL=(nix run nixpkgs#dotool --); fi
+{ echo "keydelay 50"; printf '%s\n' "$@"; } | "${DOTOOL[@]}"

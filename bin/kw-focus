@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Activate (focus and raise) a KWin window by app class and optional caption substring.
+# Usage: kw-focus <resourceClass substring> [caption substring]
+# Example: kw-focus firefox YouTube
+set -euo pipefail
+. "$(dirname "$0")/kw-env"
+cls=${1:?usage: kw-focus <class> [caption]}; cap=${2:-}
+tmp=$(mktemp --suffix=.js); trap 'rm -f "$tmp"' EXIT
+cat > "$tmp" <<JS
+const cls = ${cls@Q}.toLowerCase(), cap = ${cap@Q};
+const ws = workspace.windowList ? workspace.windowList() : workspace.clientList();
+for (const w of ws) {
+  if ((w.resourceClass || "").toLowerCase().includes(cls) && (w.caption || "").includes(cap)) {
+    workspace.activeWindow = w; break;
+  }
+}
+JS
+name="kwfocus$$"
+id=$(qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$tmp" "$name")
+qdbus org.kde.KWin "/Scripting/Script$id" org.kde.kwin.Script.run >/dev/null
+sleep 0.5
+qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "$name" >/dev/null

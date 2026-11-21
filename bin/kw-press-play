@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Focus the Firefox window showing YouTube, press YouTube's play/pause key, and
+# confirm through MPRIS that something is now playing.
+# Usage: kw-press-play [caption substring, default "YouTube"]
+set -euo pipefail
+here=$(dirname "$0")
+cap=${1:-YouTube}
+"$here/kw-focus" firefox "$cap"
+"$here/kw-input" "key k"
+sleep 3
+"$here/kw-mpris"

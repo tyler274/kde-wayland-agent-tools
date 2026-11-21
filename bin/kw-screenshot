@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Capture the whole desktop to a PNG without any GUI, using Spectacle.
+# Usage: kw-screenshot [out.png]   (default: ./desktop-<timestamp>.png)
+set -euo pipefail
+. "$(dirname "$0")/kw-env"
+out=${1:-desktop-$(date +%Y%m%d-%H%M%S).png}
+spectacle -b -n -f -o "$out"
+echo "$out"

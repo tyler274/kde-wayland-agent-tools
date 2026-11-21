@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Show every MPRIS media player on the session bus with its status and title.
+set -euo pipefail
+. "$(dirname "$0")/kw-env"
+found=0
+for name in $(busctl --user list --no-pager --acquired | awk '{print $1}' | grep '^org.mpris.MediaPlayer2.' || true); do
+  found=1
+  status=$(busctl --user get-property "$name" /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player PlaybackStatus | sed 's/^s //')
+  title=$(busctl --user get-property "$name" /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player Metadata 2>/dev/null | grep -o '"xesam:title" s "[^"]*"' | sed 's/.* s //' || true)
+  echo "$name  $status  ${title:-}"
+done
+[ "$found" = 1 ] || echo "no MPRIS players (Firefox registers one only after media has started)"
